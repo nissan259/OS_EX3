@@ -5,12 +5,6 @@
 #include "Kosaraju.hpp"
 
 int main() {
-        //KosarajuList();
-        Kosarajudeque();
-         KosarajuMix() ;
-         KosarajuVector();
-        
+    Kosaraju();
     return 0;
 }
-
-

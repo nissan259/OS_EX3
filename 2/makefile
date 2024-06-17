@@ -1,33 +1,34 @@
-# Define the compiler and compiler flags
+# Compiler and compiler flags
 CXX = g++
-CXXFLAGS = -std=c++11 -Wall -Wextra -pg
+CXXFLAGS = -std=c++17 -Wall -Wextra -pg
 
-# Define the target executable
-TARGET = scc_finder
+# Source files
+SRCS = main.cpp Kosarajudeque.cpp
 
-# Define the source files
-SRCS = main.cpp kosaraju-sharir.cpp
-
-# Define the object files
+# Object files
 OBJS = $(SRCS:.cpp=.o)
 
-# Default target to build the executable
-all: $(TARGET)
+# Output binary
+TARGET = kosaraju
 
-# Rule to build the target executable
+# Build target
 $(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS)
 
-# Rule to build object files from source files
+# Rule for compiling source files into object files
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Rule to clean up the build artifacts
+# Target for profiling
+profile: $(OBJS)
+	$(CXX) $(CXXFLAGS) -pg -o $(TARGET) $(OBJS)
+	./$(TARGET)   # Run your program with profiling enabled
+	gprof $(TARGET) > gprof_output.txt   # Capture gprof output
+	./format_gprof.sh   # Run your formatting script
+
+# Clean up build artifacts and gprof output
 clean:
-	rm -f $(TARGET) $(OBJS) gmon.out
+	rm -f $(OBJS) $(TARGET) gmon.out gprof_output.txt formatted_gprof.txt
 
-# Rule to run the program with input redirection from input.txt
-run: $(TARGET)
-	./$(TARGET) < input.txt
-
-.PHONY: all clean run
+# PHONY targets
+.PHONY: clean profile

@@ -1,33 +1,24 @@
-# Define the compiler and compiler flags
+# Compiler and compiler flags
 CXX = g++
-CXXFLAGS = -std=c++11 -Wall -Wextra
+CXXFLAGS = -std=c++17 -Wall -Wextra
 
-# Define the target executable
-TARGET = scc_finder
+# Source files
+SRCS = main.cpp Kosaraju.cpp
 
-# Define the source files
-SRCS = EX1_main.cpp kosaraju-sharir.cpp
-
-# Define the object files
+# Object files
 OBJS = $(SRCS:.cpp=.o)
 
-# Default target to build the executable
-all: $(TARGET)
+# Output binary
+TARGET = kosaraju
 
-# Rule to build the target executable
+# Build target
 $(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS)
 
-# Rule to build object files from source files
+# Rule for compiling source files into object files
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Rule to clean up the build artifacts
+# Clean up build artifacts
 clean:
-	rm -f $(TARGET) $(OBJS)
-
-# Rule to run the program with input redirection from input.txt
-run: $(TARGET)
-	./$(TARGET) < input.txt
-
-.PHONY: all clean run
+	rm -f $(OBJS) $(TARGET)
