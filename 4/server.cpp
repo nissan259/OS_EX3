@@ -49,6 +49,7 @@ void Kosaraju(int client_fd) {
     vector<bool> visited(n, false);
     list<int> order;
 
+    // First DFS to fill order of vertices
     function<void(int)> dfs1 = [&](int u) {
         visited[u] = true;
         for (int v : adj[u]) {
@@ -59,6 +60,7 @@ void Kosaraju(int client_fd) {
         order.push_back(u);
     };
 
+    // Perform DFS on each vertex to fill the order
     for (int i = 0; i < n; ++i) {
         if (!visited[i]) {
             dfs1(i);
@@ -69,6 +71,7 @@ void Kosaraju(int client_fd) {
     vector<int> component(n, -1);
     vector<list<int>> components; // To store the nodes of each component
 
+    // Second DFS on the transpose graph
     function<void(int, int)> dfs2 = [&](int u, int comp) {
         component[u] = comp;
         components[comp].push_back(u);
@@ -87,6 +90,7 @@ void Kosaraju(int client_fd) {
         }
     }
 
+    // Prepare the result to send to the client
     string result = "Number of strongly connected components: " + to_string(comp) + "\n";
     for (int i = 0; i < comp; ++i) {
         result += "Component " + to_string(i + 1) + ": ";
@@ -118,6 +122,7 @@ void Removeedge(int u, int v) {
     }
 }
 
+// Function to handle each client in a separate thread
 void *handle_client(void *arg) {
     int client_fd = (intptr_t)arg;
     char buf[1024];
@@ -149,7 +154,7 @@ void *handle_client(void *arg) {
                 }
             }
 
-             msg = "Graph created with " + to_string(numVertices) + " vertices and " + to_string(numEdges) + " edges.\n";
+            msg = "Graph created with " + to_string(numVertices) + " vertices and " + to_string(numEdges) + " edges.\n";
             send(client_fd, msg.c_str(), msg.size(), 0);
         } else if (cmd == "Kosaraju") {
             Kosaraju(client_fd);
@@ -165,13 +170,11 @@ void *handle_client(void *arg) {
             Removeedge(u, v);
             string msg = "Edge " + to_string(u) + " " + to_string(v) + " removed.\n";
             send(client_fd, msg.c_str(), msg.size(), 0);
-        }
-        else if (cmd == "Exit") {
+        } else if (cmd == "Exit") {
             string msg = "Goodbye!\n";
             send(client_fd, msg.c_str(), msg.size(), 0);
             break;
-        }
-        else {
+        } else {
             string msg = "Invalid command\n";
             send(client_fd, msg.c_str(), msg.size(), 0);
         }
@@ -181,6 +184,7 @@ void *handle_client(void *arg) {
     return NULL;
 }
 
+// Signal handler to gracefully shut down the server
 void signal_handler(int signum) {
     // Close the listening socket
     close(listener);
@@ -189,8 +193,8 @@ void signal_handler(int signum) {
 }
 
 int main() {
-    struct sockaddr_in serveraddr;    // server address
-    struct sockaddr_in clientaddr;    // client address
+    struct sockaddr_in serveraddr;    // Server address
+    struct sockaddr_in clientaddr;    // Client address
     socklen_t addrlen;
     char buf[1024];    // Buffer for client data
 
@@ -251,7 +255,6 @@ int main() {
 
     return 0;
 }
-
 
 //make
 //./server
