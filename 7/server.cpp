@@ -27,8 +27,11 @@ int n = 0, m = 0; // Number of vertices and edges
 vector<list<int>> adj; // Adjacency list for the graph
 vector<list<int>> adjT; // Transpose adjacency list for Kosaraju's algorithm
 
+pthread_mutex_t graph_mutex = PTHREAD_MUTEX_INITIALIZER; // Mutex for protecting the graph
+
 // Function to initialize a new graph
 void Newgraph(int numVertices, int numEdges) {
+    pthread_mutex_lock(&graph_mutex);
     n = numVertices;
     m = numEdges;
 
@@ -36,13 +39,16 @@ void Newgraph(int numVertices, int numEdges) {
     adj.resize(n);
     adjT.clear();
     adjT.resize(n);
+    pthread_mutex_unlock(&graph_mutex);
 }
 
 // Kosaraju's algorithm function
 void Kosaraju(int client_fd) {
+    pthread_mutex_lock(&graph_mutex);
     if (n <= 0 || m <= 0 || m > 2 * n) {
         string msg = "Invalid input\n";
         send(client_fd, msg.c_str(), msg.size(), 0);
+        pthread_mutex_unlock(&graph_mutex);
         return;
     }
 
@@ -101,27 +107,36 @@ void Kosaraju(int client_fd) {
     }
 
     send(client_fd, result.c_str(), result.size(), 0);
+    pthread_mutex_unlock(&graph_mutex);
+
 }
 
 // Function to add a new edge
 void Newedge(int u, int v) {
+    pthread_mutex_lock(&graph_mutex);
     adj[u].push_back(v);
     adjT[v].push_back(u);
+    pthread_mutex_unlock(&graph_mutex);
 }
 
-// Function to remove an edge
 void Removeedge(int u, int v) {
+    pthread_mutex_lock(&graph_mutex);
+
+    // Remove from the original adjacency list
     auto it = find(adj[u].begin(), adj[u].end(), v);
     if (it != adj[u].end()) {
         adj[u].erase(it);
     }
 
-    it = find(adjT[v].begin(), adjT[v].end(), u);
-    if (it != adjT[v].end()) {
-        adjT[v].erase(it);
+    // Remove from the transpose adjacency list
+    // Use the correct iterator type for adjT
+    auto itT = find(adjT[v].begin(), adjT[v].end(), u);
+    if (itT != adjT[v].end()) {
+        adjT[v].erase(itT);
     }
-}
 
+    pthread_mutex_unlock(&graph_mutex);
+}
 // Function to handle each client in a separate thread
 void *handle_client(void *arg) {
     int client_fd = (intptr_t)arg;
@@ -255,16 +270,3 @@ int main() {
 
     return 0;
 }
-
-//make
-//./server
-//telnet localhost 9034
-//Newgraph 3 3
-//0 1
-//0 2
-//1 2
-//Kosaraju
-//Newedge 2 0
-//Removeedge 0 1
-//Kosaraju
-//Exit
