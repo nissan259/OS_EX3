@@ -15,6 +15,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <signal.h>
+#include "proactor.hpp"
 
 using namespace std;
 
@@ -138,12 +139,11 @@ void Removeedge(int u, int v) {
 }
 
 // Function to handle each client in a separate thread
-void *handle_client(void *arg) {
-    int client_fd = (intptr_t)arg;
+void* handle_client(int sockfd) {
     char buf[1024];
     int numbytes;
 
-    while ((numbytes = recv(client_fd, buf, sizeof(buf) - 1, 0)) > 0) {
+    while ((numbytes = recv(sockfd, buf, sizeof(buf) - 1, 0)) > 0) {
         buf[numbytes] = '\0';
         string command(buf);
         stringstream ss(command);
@@ -157,10 +157,10 @@ void *handle_client(void *arg) {
 
             // Inform the client to send the edges
             string msg = "Enter " + to_string(numEdges) + " edges:\n";
-            send(client_fd, msg.c_str(), msg.size(), 0);
+            send(sockfd, msg.c_str(), msg.size(), 0);
 
             for (int i = 0; i < numEdges; ++i) {
-                if ((numbytes = recv(client_fd, buf, sizeof(buf) - 1, 0)) > 0) {
+                if ((numbytes = recv(sockfd, buf, sizeof(buf) - 1, 0)) > 0) {
                     buf[numbytes] = '\0';
                     stringstream edge_ss(buf);
                     int u, v;
@@ -170,32 +170,32 @@ void *handle_client(void *arg) {
             }
 
             msg = "Graph created with " + to_string(numVertices) + " vertices and " + to_string(numEdges) + " edges.\n";
-            send(client_fd, msg.c_str(), msg.size(), 0);
+            send(sockfd, msg.c_str(), msg.size(), 0);
         } else if (cmd == "Kosaraju") {
-            Kosaraju(client_fd);
+            Kosaraju(sockfd);
         } else if (cmd == "Newedge") {
             int u, v;
             ss >> u >> v;
             Newedge(u, v);
             string msg = "Edge " + to_string(u) + " " + to_string(v) + " added.\n";
-            send(client_fd, msg.c_str(), msg.size(), 0);
+            send(sockfd, msg.c_str(), msg.size(), 0);
         } else if (cmd == "Removeedge") {
             int u, v;
             ss >> u >> v;
             Removeedge(u, v);
             string msg = "Edge " + to_string(u) + " " + to_string(v) + " removed.\n";
-            send(client_fd, msg.c_str(), msg.size(), 0);
+            send(sockfd, msg.c_str(), msg.size(), 0);
         } else if (cmd == "Exit") {
             string msg = "Goodbye!\n";
-            send(client_fd, msg.c_str(), msg.size(), 0);
+            send(sockfd, msg.c_str(), msg.size(), 0);
             break;
         } else {
             string msg = "Invalid command\n";
-            send(client_fd, msg.c_str(), msg.size(), 0);
+            send(sockfd, msg.c_str(), msg.size(), 0);
         }
     }
 
-    close(client_fd);
+    close(sockfd);
     return NULL;
 }
 
@@ -259,12 +259,14 @@ int main() {
             continue;
         }
 
-        printf("New connection from %s on socket %d\n", inet_ntoa(clientaddr.sin_addr), newfd);
+        printf("New connection from %s on socket %d (PID: %d, TID: %lu)\n", inet_ntoa(clientaddr.sin_addr), newfd, getpid(), pthread_self());
 
-        pthread_t client_thread;
-        if (pthread_create(&client_thread, NULL, handle_client, (void *)(intptr_t)newfd) != 0) {
-            perror("pthread_create");
+        pthread_t tid = startProactor(newfd, handle_client);
+        if (tid == -1) {
+            perror("startProactor");
             close(newfd);
+        } else {
+            printf("Started proactor on socket %d, thread ID: %lu\n", newfd, tid);
         }
     }
 
