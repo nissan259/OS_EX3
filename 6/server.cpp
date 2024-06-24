@@ -278,3 +278,16 @@ int main() {
 
     return 0;
 }
+
+//make
+//./server
+//telnet localhost 9034
+//Newgraph 3 3
+//0 1
+//0 2
+//1 2
+//Kosaraju
+//Newedge 2 0
+//Removeedge 0 1
+//Kosaraju
+//Exit
