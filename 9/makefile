@@ -5,10 +5,10 @@ CXX = g++
 CXXFLAGS = -Wall -pthread
 
 # Define the source files
-SRCS = main.cpp proactor.cpp
+SRCS = server.cpp proactor.cpp
 
 # Define the object files
-OBJS = main.o proactor.o
+OBJS = server.o proactor.o
 
 # Define the output executable
 TARGET = server
@@ -18,8 +18,8 @@ $(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS)
 
 # Rule to build the object files
-main.o: main.cpp proactor.hpp
-	$(CXX) $(CXXFLAGS) -c main.cpp
+server.o: server.cpp proactor.hpp
+	$(CXX) $(CXXFLAGS) -c server.cpp
 
 proactor.o: proactor.cpp proactor.hpp
 	$(CXX) $(CXXFLAGS) -c proactor.cpp

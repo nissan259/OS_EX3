@@ -270,17 +270,3 @@ int main() {
 
     return 0;
 }
-
-//for running the server use the following commands
-//make
-//./server
-//for running the client open a new terminal and use the following commands
-//telnet localhost 9033 (client 1)
-//open another terminal and use the following commands
-//telnet localhost 9033 (client 2)
-//(client 1) Newgraph 3 3
-//(client 1) 0 1
-//(client 1) 1 2
-//(client 1) 2 0
-// (client 2) Removeedge 1 2
-// (client 1) Kosaraju
