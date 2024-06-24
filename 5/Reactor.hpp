@@ -5,9 +5,6 @@
 #include <vector>
 #include <functional>
 #include <poll.h>
-#include <thread>
-#include <atomic>
-#include <mutex>
 
 using reactorFunc = void* (*)(int fd);
 
@@ -21,14 +18,12 @@ public:
     static int removeFdFromReactor(void* reactor, int fd);
     static int stopReactor(void* reactor);
 
-private:
     void run();
 
+private:
     std::unordered_map<int, reactorFunc> handlers;
     std::vector<struct pollfd> pollfds;
-    std::atomic<bool> running;
-    std::thread reactorThread;
-    std::mutex mtx;
+    bool running;
 };
 
 #endif // REACTOR_HPP

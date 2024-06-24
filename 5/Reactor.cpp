@@ -1,7 +1,7 @@
 #include "Reactor.hpp"
 #include <iostream>
-#include <stdexcept>
-#include <cstring> // Include this header for strerror
+#include <algorithm>
+#include <cstring>
 
 Reactor::Reactor() : running(false) {}
 
@@ -14,13 +14,11 @@ Reactor::~Reactor() {
 void* Reactor::startReactor() {
     Reactor* reactor = new Reactor();
     reactor->running = true;
-    reactor->reactorThread = std::thread(&Reactor::run, reactor);
     return static_cast<void*>(reactor);
 }
 
 int Reactor::addFdToReactor(void* reactorPtr, int fd, reactorFunc func) {
     Reactor* reactor = static_cast<Reactor*>(reactorPtr);
-    std::lock_guard<std::mutex> lock(reactor->mtx);
 
     if (reactor->handlers.find(fd) != reactor->handlers.end()) {
         return -1; // fd already exists
@@ -37,7 +35,6 @@ int Reactor::addFdToReactor(void* reactorPtr, int fd, reactorFunc func) {
 
 int Reactor::removeFdFromReactor(void* reactorPtr, int fd) {
     Reactor* reactor = static_cast<Reactor*>(reactorPtr);
-    std::lock_guard<std::mutex> lock(reactor->mtx);
 
     auto it = reactor->handlers.find(fd);
     if (it == reactor->handlers.end()) {
@@ -53,32 +50,25 @@ int Reactor::removeFdFromReactor(void* reactorPtr, int fd) {
 }
 
 int Reactor::stopReactor(void* reactorPtr) {
+    std::cout << "Stopping reactor" << std::endl;
     Reactor* reactor = static_cast<Reactor*>(reactorPtr);
     reactor->running = false;
-    if (reactor->reactorThread.joinable()) {
-        reactor->reactorThread.join();
-    }
     delete reactor;
+    std::cout << "Reactor stopped" << std::endl;
     return 0;
 }
 
 void Reactor::run() {
+    running = true;
     while (running) {
-        std::vector<struct pollfd> fds_copy;
-        {
-            std::lock_guard<std::mutex> lock(mtx);
-            fds_copy = pollfds;
-        }
-
-        int ret = poll(fds_copy.data(), fds_copy.size(), -1);
+        int ret = poll(pollfds.data(), pollfds.size(), -1);
         if (ret < 0) {
             std::cerr << "Poll error: " << strerror(errno) << std::endl;
             continue;
         }
 
-        for (auto &pfd : fds_copy) {
+        for (auto &pfd : pollfds) {
             if (pfd.revents & POLLIN) {
-                std::lock_guard<std::mutex> lock(mtx);
                 auto it = handlers.find(pfd.fd);
                 if (it != handlers.end()) {
                     it->second(pfd.fd);

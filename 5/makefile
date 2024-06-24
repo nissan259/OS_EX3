@@ -14,7 +14,7 @@ $(EXEC): $(OBJS)
 
 # Compile source files into object files
 %.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -g -c $< -o $@
 
 # Clean up object files and executable
 clean:
