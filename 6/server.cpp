@@ -29,7 +29,100 @@ void* g_reactor = nullptr;
 void* accept_connection(int listener_fd);
 void* handle_client(int client_fd);
 
-// Existing graph functions (Newgraph, Kosaraju, Newedge, Removeedge) remain the same
+// Function to initialize a new graph
+void Newgraph(int numVertices, int numEdges) {
+    n = numVertices;
+    m = numEdges;
+
+    adj.clear();
+    adj.resize(n);
+    adjT.clear();
+    adjT.resize(n);
+}
+
+// Kosaraju's algorithm function
+void Kosaraju(int client_fd) {
+    if (n <= 0 || m <= 0 || m > 2 * n) {
+        string msg = "Invalid input\n";
+        send(client_fd, msg.c_str(), msg.size(), 0);
+        return;
+    }
+
+    vector<bool> visited(n, false);
+    list<int> order;
+
+    // First DFS to fill order of vertices
+    function<void(int)> dfs1 = [&](int u) {
+        visited[u] = true;
+        for (int v : adj[u]) {
+            if (!visited[v]) {
+                dfs1(v);
+            }
+        }
+        order.push_back(u);
+    };
+
+    // Perform DFS on each vertex to fill the order
+    for (int i = 0; i < n; ++i) {
+        if (!visited[i]) {
+            dfs1(i);
+        }
+    }
+
+    reverse(order.begin(), order.end());
+    vector<int> component(n, -1);
+    vector<list<int>> components; // To store the nodes of each component
+
+    // Second DFS on the transpose graph
+    function<void(int, int)> dfs2 = [&](int u, int comp) {
+        component[u] = comp;
+        components[comp].push_back(u);
+        for (int v : adjT[u]) {
+            if (component[v] == -1) {
+                dfs2(v, comp);
+            }
+        }
+    };
+
+    int comp = 0;
+    for (int u : order) {
+        if (component[u] == -1) {
+            components.push_back(list<int>()); // Add a new component
+            dfs2(u, comp++);
+        }
+    }
+
+    // Prepare the result to send to the client
+    string result = "Number of strongly connected components: " + to_string(comp) + "\n";
+    for (int i = 0; i < comp; ++i) {
+        result += "Component " + to_string(i + 1) + ": ";
+        for (int node : components[i]) {
+            result += to_string(node) + " ";
+        }
+        result += "\n";
+    }
+
+    send(client_fd, result.c_str(), result.size(), 0);
+}
+
+// Function to add a new edge
+void Newedge(int u, int v) {
+    adj[u].push_back(v);
+    adjT[v].push_back(u);
+}
+
+// Function to remove an edge
+void Removeedge(int u, int v) {
+    auto it = find(adj[u].begin(), adj[u].end(), v);
+    if (it != adj[u].end()) {
+        adj[u].erase(it);
+    }
+
+    it = find(adjT[v].begin(), adjT[v].end(), u);
+    if (it != adjT[v].end()) {
+        adjT[v].erase(it);
+    }
+}
 
 // Signal handler to gracefully shut down the server
 void signal_handler(int signum) {
@@ -82,17 +175,40 @@ void* handle_client(int client_fd) {
     ss >> cmd;
 
     if (cmd == "Newgraph") {
-        // Handle Newgraph command
-        // ...
+        int numVertices, numEdges;
+        ss >> numVertices >> numEdges;
+        Newgraph(numVertices, numEdges);
+
+        string msg = "Enter " + to_string(numEdges) + " edges:\n";
+        send(client_fd, msg.c_str(), msg.size(), 0);
+
+        for (int i = 0; i < numEdges; ++i) {
+            numbytes = recv(client_fd, buf, sizeof(buf) - 1, 0);
+            if (numbytes > 0) {
+                buf[numbytes] = '\0';
+                stringstream edge_ss(buf);
+                int u, v;
+                edge_ss >> u >> v;
+                Newedge(u, v);
+            }
+        }
+
+        msg = "Graph created with " + to_string(numVertices) + " vertices and " + to_string(numEdges) + " edges.\n";
+        send(client_fd, msg.c_str(), msg.size(), 0);
     } else if (cmd == "Kosaraju") {
-        // Handle Kosaraju command
-        // ...
+        Kosaraju(client_fd);
     } else if (cmd == "Newedge") {
-        // Handle Newedge command
-        // ...
+        int u, v;
+        ss >> u >> v;
+        Newedge(u, v);
+        string msg = "Edge " + to_string(u) + " " + to_string(v) + " added.\n";
+        send(client_fd, msg.c_str(), msg.size(), 0);
     } else if (cmd == "Removeedge") {
-        // Handle Removeedge command
-        // ...
+        int u, v;
+        ss >> u >> v;
+        Removeedge(u, v);
+        string msg = "Edge " + to_string(u) + " " + to_string(v) + " removed.\n";
+        send(client_fd, msg.c_str(), msg.size(), 0);
     } else if (cmd == "Exit") {
         string msg = "Goodbye!\n";
         send(client_fd, msg.c_str(), msg.size(), 0);
